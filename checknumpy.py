@@ -36,7 +36,5 @@ def calculate_forward_kinematics_robot(joint_angles):
         np.dot(generate_y_rotation(joint_angles[1]), r2)
     r4 = np.dot(generate_z_rotation(joint_angles[2]), r3)
 
-    print(f"r4: {r4}")
-
 
 calculate_forward_kinematics_robot([0, 0, 0])
