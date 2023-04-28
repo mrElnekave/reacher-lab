@@ -3,10 +3,11 @@ import numpy as np
 import copy
 
 HIP_OFFSET = 0.0335
-L1 = 0.08 # length of link 1
-L2 = 0.11 # length of link 2
-TOLERANCE = 0.01 # tolerance for inverse kinematics
-PERTURBATION = 0.0001 # perturbation for finite difference method
+L1 = 0.08  # length of link 1
+L2 = 0.11  # length of link 2
+TOLERANCE = 0.01  # tolerance for inverse kinematics
+PERTURBATION = 0.0001  # perturbation for finite difference method
+
 
 def calculate_forward_kinematics_robot(joint_angles):
     """Calculate xyz coordinates of end-effector given joint angles.
@@ -21,7 +22,9 @@ def calculate_forward_kinematics_robot(joint_angles):
     """
     # TODO for students: Implement this function. ~25-35 lines of code.
     end_effector_xyz = np.array([0.0, 0.0, 0.0])
+
     return end_effector_xyz
+
 
 def ik_cost(end_effector_pos, guess):
     """Calculates the inverse kinematics loss.
@@ -40,6 +43,8 @@ def ik_cost(end_effector_pos, guess):
     raise cost
 
 # write a function that uses newtons method to update the joint angles
+
+
 def newtons(guess, gradient):
     """Update joint angles using a single step of Newton's method.
 
@@ -54,6 +59,8 @@ def newtons(guess, gradient):
     return updated_guess
 
 # write a function that uses finite difference method to compute the gradient of the loss function
+
+
 def finite_difference(end_effector_pos, guess):
     """Calculate the gradient of the loss function using finite difference method.
 
@@ -71,6 +78,7 @@ def finite_difference(end_effector_pos, guess):
     gradient = np.array([0.0, 0.0, 0.0])
     return gradient
 
+
 def calculate_inverse_kinematics(end_effector_pos, guess):
     """Calculates joint angles given desired xyz coordinates.
 
@@ -78,7 +86,7 @@ def calculate_inverse_kinematics(end_effector_pos, guess):
     joint angles that minimize the loss function are the joint angles that give 
     the smallest error from the actual resulting end-effector position to the
     desired end-effector position. 
-    
+
     1. Calculate the gradient of the loss function with respect to the joint angles using finite 
     difference method
     2. Use Newton's method to update the joint angles
@@ -96,9 +104,9 @@ def calculate_inverse_kinematics(end_effector_pos, guess):
 
     joint_angles = np.array([0.0, 0.0, 0.0])
 
-    loss = np.inf # initialize loss to infinity
+    loss = np.inf  # initialize loss to infinity
 
-    loss_gradient = np.array([0.0, 0.0, 0.0]) # initialize gradient
+    loss_gradient = np.array([0.0, 0.0, 0.0])  # initialize gradient
 
     # remove this line when you write your loop
     raise Exception("Loop termination condition not implemented yet.")
@@ -107,8 +115,5 @@ def calculate_inverse_kinematics(end_effector_pos, guess):
         # 2. use finite difference method to compute gradient of loss
         # 3. update joint angles using newtons method
         break
-
-
-
 
     return joint_angles
