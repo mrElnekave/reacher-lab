@@ -95,7 +95,7 @@ def main(argv):
                 joint_angles[:3])
 
             p.resetBasePositionAndOrientation(sphere_id,
-                                              posObj=xyz,
+                                              posObj=end_effector_pos,
                                               ornObj=[0, 0, 0, 1])
 
             if counter % 20 == 0:
