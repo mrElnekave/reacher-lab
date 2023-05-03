@@ -115,7 +115,7 @@ def main(argv):
             end_effector_pos = reacher_kinematics.calculate_forward_kinematics_robot(
                 joint_angles[:3])
             p.resetBasePositionAndOrientation(sphere_id,
-                                              posObj=xyz,
+                                              posObj=end_effector_pos,
                                               ornObj=[0, 0, 0, 1])
 
             if counter % 20 == 0:
