@@ -36,16 +36,13 @@ def calculate_forward_kinematics_robot(joint_angles):
             [0, 0, 1]
         ])
 
-    # if joint_angles[1] < 1/4 * np.pi:
-    #     joint_angles[1] = 1/4 * np.pi
-
     joint_angles *= -1
     r1 = np.array([0, 0, L2])
     r2 = np.array([0, 0, L1]).transpose() + \
-        np.dot(generate_y_rotation(joint_angles[2]), r1)
+        np.matmul(generate_y_rotation(joint_angles[2]), r1)
     r3 = np.array([0, -HIP_OFFSET, 0]).transpose() + \
-        np.dot(generate_y_rotation(joint_angles[1]), r2)
-    r4 = np.dot(generate_z_rotation(joint_angles[0]), r3)
+        np.matmul(generate_y_rotation(joint_angles[1]), r2)
+    r4 = np.matmul(generate_z_rotation(joint_angles[0]), r3)
 
     return r4
 
@@ -78,11 +75,13 @@ def partial_derivative_calc(angle_index, space_index, joint_angles):
     Returns:
         partial_div: float, with the space index relative to the angle index
     """
-    delta = 0.0001
-    joint_angles_copy = copy.deepcopy(joint_angles)
-    joint_angles_copy[angle_index] += delta
-    partial_div = (calculate_forward_kinematics_robot(joint_angles_copy)[space_index] - calculate_forward_kinematics_robot(
-        joint_angles)[space_index]) / delta
+    end_effector_pos = calculate_forward_kinematics_robot(joint_angles)
+    joint_angles[angle_index] += PERTURBATION
+    perturbed_end_effector_pos = calculate_forward_kinematics_robot(
+        joint_angles)
+    partial_div = (perturbed_end_effector_pos[space_index] -
+                   end_effector_pos[space_index]) / PERTURBATION
+
     return partial_div
 
 
@@ -103,15 +102,17 @@ def calculate_jacobian(joint_angles) -> np.ndarray:
     Returns:
       Jacobian matrix. Numpy 3x3 array.
     """
-    jacobian = np.zeros([3, 3])
-    for cartesian in range(3):
-        for angle in range(3):
-            jacobian[cartesian][angle] = partial_derivative_calc(
-                angle, cartesian, joint_angles)
+    jacobian = np.zeros((3, 3))
+    # traverse the cartesian space and the joint angles
+    for space_index in range(3):
+        for angle_index in range(3):
+            jacobian[space_index][angle_index] = partial_derivative_calc(
+                angle_index, space_index, joint_angles)
+
     return jacobian
 
 
-def calculate_inverse_kinematics(end_effector_pos, starting_joint_angles):
+def calculate_inverse_kinematics2(end_effector_pos, starting_joint_angles):
     """Calculates joint angles given desired xyz coordinates.
     Use gradient descent to minimize the inverse kinematics loss function. The
     joint angles that minimize the loss function are the joint angles that give 
@@ -126,6 +127,10 @@ def calculate_inverse_kinematics(end_effector_pos, starting_joint_angles):
       Returns None when IK times out because the end-effector position is infeasible.
     """
     # sphere cast limit for maximum distance
+    max_reach_of_arm = L1 + L2
+    if np.linalg.norm(end_effector_pos) > max_reach_of_arm:
+        end_effector_pos = end_effector_pos / \
+            np.linalg.norm(end_effector_pos) * max_reach_of_arm
 
     # TODO for students: Implement this function. ~10-20 lines of code.
     joint_angles = starting_joint_angles
@@ -154,4 +159,44 @@ def calculate_inverse_kinematics(end_effector_pos, starting_joint_angles):
 
         loop_counter += 1
 
+    return joint_angles
+
+
+def calculate_inverse_kinematics(end_effector_pos, starting_joint_angles):
+    """Calculates joint angles given desired xyz coordinates.
+    Use gradient descent to minimize the inverse kinematics loss function. The
+    joint angles that minimize the loss function are the joint angles that give 
+    the smallest error from the actual resulting end-effector position to the
+    desired end-effector position. You should use the jacobain function
+    you wrote above.
+    Args:
+      end_effector_pos: Desired xyz coordinates of end-effector. Numpy array of 3 elements.
+      starting_joint_angles: Where the robot starts. In terms of angles.
+    Returns:
+      Joint angles that correspond to given desired end-effector position. Numpy array with 3 elements.
+      Returns None when IK times out because the end-effector position is infeasible.
+    """
+    # sphere cast limit for maximum distance
+    max_reach_of_arm = L1 + L2
+    if np.linalg.norm(end_effector_pos) > max_reach_of_arm:
+        end_effector_pos = end_effector_pos / \
+            np.linalg.norm(end_effector_pos) * max_reach_of_arm
+
+    # initialize variables
+    joint_angles = starting_joint_angles
+    step_size = 1
+    max_iterations = 1000
+    iteration = 0
+    # while the cost is greater than the tolerance and the iteration is less than the max iterations
+    while ik_cost(end_effector_pos, joint_angles) > TOLERANCE and iteration < max_iterations:
+        # calculate the jacobian
+        jacobian = calculate_jacobian(joint_angles)
+        # calculate the gradient
+        gradient = np.matmul(jacobian.transpose(), calculate_forward_kinematics_robot(
+            joint_angles) - end_effector_pos)
+        # update the joint angles
+        joint_angles -= step_size * gradient
+        iteration += 1
+
+    # return the joint angles
     return joint_angles

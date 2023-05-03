@@ -71,15 +71,15 @@ def main(argv):
                 c = param_ids[i]
                 targetPos = p.readUserDebugParameter(c)
                 slider_angles[i] = targetPos
-
             # If IK is enabled, update joint angles based off of goal XYZ position
             if FLAGS.ik:
                 xyz = []
                 for i in range(len(param_ids), len(param_ids) + 3):
                     xyz.append(p.readUserDebugParameter(i))
                 xyz = np.asarray(xyz)
+                print(xyz, joint_angles[:3])
                 ret = reacher_kinematics.calculate_inverse_kinematics(
-                    xyz, joint_angles[:3])
+                    xyz, np.asarray([0.0, 0.0, 0.0]))
                 if ret is None:
                     enable = False
                 else:
@@ -113,13 +113,14 @@ def main(argv):
 
             end_effector_pos = reacher_kinematics.calculate_forward_kinematics_robot(
                 joint_angles[:3])
+            end_effector_pos = xyz  # added for debugging
             p.resetBasePositionAndOrientation(sphere_id,
                                               posObj=end_effector_pos,
                                               ornObj=[0, 0, 0, 1])
 
-            if counter % 20 == 0:
-                print("Joint angles:", joint_angles,
-                      "Position:", end_effector_pos)
+            # if counter % 20 == 0:
+            #     print("Joint angles:", joint_angles,
+            #           "Position:", end_effector_pos)
 
 
 app.run(main)
