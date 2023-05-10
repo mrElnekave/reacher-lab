@@ -4,9 +4,17 @@ import numpy as np
 HIP_OFFSET = 0.0335
 L1 = 0.08  # length of link 1
 L2 = 0.11  # length of link 2
-TOLERANCE = 5e-5  # tolerance for inverse kinematics
-PERTURBATION = 0.0001  # perturbation for finite difference method
+
+# Variables for gradient descent
+
+# tolerance for inverse kinematics, needs to be really close to the actual position
+TOLERANCE = 2e-5
+# perturbation for finite difference method
+PERTURBATION = 0.0001
+# step size for gradient descent
 STEP_SIZE = 20
+# maximum number of iterations of gradient descent
+MAX_ITERATIONS = 1000
 
 
 def _generate_y_rotation(theta):
@@ -69,26 +77,22 @@ def ik_cost(end_effector_pos, guess):
     return cost
 
 
-def partial_derivative_calc(angle_index, space_index, joint_angles):
+def partial_derivative_calc(angle_index, joint_angles) -> np.ndarray(3):
     """
-    Get the partial derivative of the forward kinematics function with respect to, the cartesian space index, and the joint angle index.
+    Get the partial derivative of the forward kinematics function with respect to the joint angle index.
+    Does all space indices at once
 
     Args:
         angle_index: int, the index of the joint angle
-        space_index: int, the index of the cartesian space
         joint_angles: numpy array of 3 elements. Numpy array of 3 elements.
     Returns:
-        partial_div: float, with the space index relative to the angle index
+        partial_div: float, with the the angle index.
     """
-    end_effector_pos = calculate_forward_kinematics_robot(joint_angles)
-    joint_angles[angle_index] += PERTURBATION
-    perturbed_end_effector_pos = calculate_forward_kinematics_robot(
-        joint_angles)
-    partial_div = (perturbed_end_effector_pos[space_index] -
-                   end_effector_pos[space_index]) / PERTURBATION
+    offset = np.zeros(3)
+    offset[angle_index] = PERTURBATION
+    partial_div = (calculate_forward_kinematics_robot(joint_angles + offset) -
+                   calculate_forward_kinematics_robot(joint_angles)) / PERTURBATION
 
-    # reset the joint angle as numpy arrays are mutable
-    joint_angles[angle_index] -= PERTURBATION
     return partial_div
 
 
@@ -111,10 +115,10 @@ def calculate_jacobian(joint_angles) -> np.ndarray:
     """
     jacobian = np.zeros((3, 3))
     # traverse the cartesian space and the joint angles
-    for space_index in range(3):
-        for angle_index in range(3):
-            jacobian[space_index][angle_index] = partial_derivative_calc(
-                angle_index, space_index, joint_angles)
+    for angle_index in range(3):
+        # set the column of the jacobian to the partial derivative
+        jacobian[:, angle_index] = partial_derivative_calc(
+            angle_index, joint_angles)
 
     return jacobian
 
@@ -141,12 +145,11 @@ def calculate_inverse_kinematics(end_effector_pos, starting_joint_angles):
 
     # initialize variables
     joint_angles = starting_joint_angles
-    max_iterations = 1000
     iteration = 0
 
     print("Original cost is: ", ik_cost(end_effector_pos, joint_angles))
     # while the cost is greater than the tolerance and the iteration is less than the max iterations
-    while ik_cost(end_effector_pos, joint_angles) > TOLERANCE and iteration < max_iterations:
+    while ik_cost(end_effector_pos, joint_angles) > TOLERANCE and iteration < MAX_ITERATIONS:
         # calculate the jacobian
         jacobian = calculate_jacobian(joint_angles)
         # calculate the gradient
