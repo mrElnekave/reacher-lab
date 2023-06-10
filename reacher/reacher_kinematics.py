@@ -152,9 +152,13 @@ def calculate_inverse_kinematics(end_effector_pos, starting_joint_angles):
     while ik_cost(end_effector_pos, joint_angles) > TOLERANCE and iteration < MAX_ITERATIONS:
         # calculate the jacobian
         jacobian = calculate_jacobian(joint_angles)
+
+        # distance to the goal, is also the gradient, as its the direction to the goal
+        gradient_xy = calculate_forward_kinematics_robot(
+            joint_angles) - end_effector_pos
+
         # calculate the gradient
-        gradient = np.matmul(jacobian.transpose(), calculate_forward_kinematics_robot(
-            joint_angles) - end_effector_pos)
+        gradient = np.matmul(jacobian.transpose(), gradient_xy)
         # update the joint angles
         joint_angles -= STEP_SIZE * gradient
         iteration += 1

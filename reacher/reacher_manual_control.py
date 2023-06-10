@@ -58,11 +58,14 @@ def main(argv):
     # The 7th element will correspond to the motor with ID=1, 8th element ID=2, etc
     # hardware_interface.send_dict({"activations": [0, 0, 0, 0, 0, 0, x, x, x, x, x, x]})
 
+    print("Starting simulation...")
     while (1):
         if run_on_robot:
             hardware_interface.read_incoming_data()
 
-        if time.time() - last_command > UPDATE_DT:
+        if dt := (time.time() - last_command) > UPDATE_DT:
+            if dt > UPDATE_DT * 2:
+                print("dt: ", dt)
             last_command = time.time()
             counter += 1
 
@@ -71,15 +74,15 @@ def main(argv):
                 c = param_ids[i]
                 targetPos = p.readUserDebugParameter(c)
                 slider_angles[i] = targetPos
+
             # If IK is enabled, update joint angles based off of goal XYZ position
             if FLAGS.ik:
                 xyz = []
                 for i in range(len(param_ids), len(param_ids) + 3):
                     xyz.append(p.readUserDebugParameter(i))
                 xyz = np.asarray(xyz)
-                print(xyz, joint_angles[:3])
                 ret = reacher_kinematics.calculate_inverse_kinematics(
-                    xyz, np.asarray([0.0, 0.0, 0.0]))
+                    xyz, joint_angles[:3])
                 if ret is None:
                     enable = False
                 else:
@@ -98,6 +101,8 @@ def main(argv):
                                         force=2.)
 
             if run_on_robot and enable:
+                print("robot angles: ", joint_angles)
+
                 full_actions = np.zeros([3, 4])
                 # TODO: Update order & signs for your own robot/motor configuration like below
                 # left_angles = [-joint_angles[1], -joint_angles[0], joint_angles[2]]
@@ -113,14 +118,13 @@ def main(argv):
 
             end_effector_pos = reacher_kinematics.calculate_forward_kinematics_robot(
                 joint_angles[:3])
-            end_effector_pos = xyz  # added for debugging
             p.resetBasePositionAndOrientation(sphere_id,
                                               posObj=end_effector_pos,
                                               ornObj=[0, 0, 0, 1])
 
-            # if counter % 20 == 0:
-            #     print("Joint angles:", joint_angles,
-            #           "Position:", end_effector_pos)
+            if counter % 20 == 0:
+                print("Joint angles:", joint_angles,
+                      "Position:", end_effector_pos)
 
 
 app.run(main)
